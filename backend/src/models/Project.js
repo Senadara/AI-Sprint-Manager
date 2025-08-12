@@ -9,7 +9,7 @@ const Project = sequelize.define('Project', {
   },
   description: {
     type: DataTypes.TEXT
-  }
+  },
 });
 
 // Relasi: Project dimiliki oleh 1 User

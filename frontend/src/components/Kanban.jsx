@@ -1,91 +1,109 @@
 // src/components/Kanban.jsx
-import React, { useEffect, useState } from 'react';
-import api from '../api/axios';
-import './Kanban.css';
-import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
+import React, { useEffect, useState } from "react";
+import api from "../api/axios";
+import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
+import { io } from "socket.io-client";
+import "./Kanban.css";
+import { useParams } from "react-router-dom";
+
+const socket = io("http://localhost:5000"); // pastikan URL & CORS sesuai
 
 const Kanban = () => {
-  const [tasks, setTasks] = useState([]);
-
+  const { projectId } = useParams(); // ambil dari URL: /projects/:projectId
+  const [tasks, setTasks] = useState({ todo: [], "in-progress": [], done: [] });
+ console.log("Project ID:", projectId); 
   useEffect(() => {
     const fetchTasks = async () => {
       try {
-        const res = await api.get('/tasks/dummyTasks');
-        setTasks(res.data);
-      } catch (error) {
-        console.error('Gagal fetch tasks:', error);
+        // const res = await api.get(`/tasks/${projectId}`);
+        const res = await api.get(`/tasks/1`); // ganti dengan projectId jika sudah ada
+        const grouped = {
+          todo: res.data.filter((t) => t.status === "todo"),
+          "in-progress": res.data.filter((t) => t.status === "in-progress"),
+          done: res.data.filter((t) => t.status === "done"),
+        };
+        setTasks(grouped);
+      } catch (err) {
+        console.error("Gagal fetch tasks:", err);
       }
     };
-
     fetchTasks();
-  }, []);
+  }, [projectId]);
 
-  const getColumns = () => ({
-    todo: tasks.filter(t => t.status === 'todo'),
-    'in-progress': tasks.filter(t => t.status === 'in-progress'),
-    done: tasks.filter(t => t.status === 'done')
-  });
-
-  const onDragEnd = (result) => {
+  const onDragEnd = async (result) => {
     const { source, destination } = result;
     if (!destination) return;
+    if (
+      source.droppableId === destination.droppableId &&
+      source.index === destination.index
+    )
+      return;
 
-    const columns = getColumns();
-    const sourceTasks = Array.from(columns[source.droppableId]);
-    const [movedTask] = sourceTasks.splice(source.index, 1);
+    const sourceCol = [...tasks[source.droppableId]];
+    const destCol = [...tasks[destination.droppableId]];
+    const [movedTask] = sourceCol.splice(source.index, 1);
+
     movedTask.status = destination.droppableId;
+    destCol.splice(destination.index, 0, movedTask);
 
-    const destTasks = Array.from(columns[destination.droppableId]);
-    destTasks.splice(destination.index, 0, movedTask);
+    const newState = {
+      ...tasks,
+      [source.droppableId]: sourceCol,
+      [destination.droppableId]: destCol,
+    };
 
-    const updatedTasks = [
-      ...columns.todo,
-      ...columns['in-progress'],
-      ...columns.done
-    ];
+    setTasks(newState);
 
-    setTasks(updatedTasks);
-
-    // Jika mau simpan perubahan ke backend
-    // api.put(`/tasks/${movedTask.id}`, { status: movedTask.status });
+    try {
+      await api.put(`/tasks/${movedTask.id}`, { status: movedTask.status });
+    } catch (err) {
+      alert("Gagal menyimpan perubahan. Coba lagi.");
+      console.error("Gagal update task di server:", err);
+    }
   };
 
-  const columns = getColumns();
+  const columns = [
+    { id: "todo", title: "To Do" },
+    { id: "in-progress", title: "In Progress" },
+    { id: "done", title: "Done" },
+  ];
 
   return (
-    <div>
-      <h2>Kanban Board</h2>
+    <div className="kanban-board">
       <DragDropContext onDragEnd={onDragEnd}>
-        <div className="kanban-board">
-          {Object.keys(columns).map((status) => (
-            <Droppable key={status} droppableId={status}>
-              {(provided) => (
-                <div
-                  className="kanban-column"
-                  ref={provided.innerRef}
-                  {...provided.droppableProps}
-                >
-                  <h3>{status.toUpperCase()}</h3>
-                  {columns[status].map((task, index) => (
-                    <Draggable key={task.id} draggableId={task.id.toString()} index={index}>
-                      {(provided) => (
-                        <div
-                          className="kanban-card"
-                          ref={provided.innerRef}
-                          {...provided.draggableProps}
-                          {...provided.dragHandleProps}
-                        >
-                          {task.title}
-                        </div>
-                      )}
-                    </Draggable>
-                  ))}
-                  {provided.placeholder}
-                </div>
-              )}
-            </Droppable>
-          ))}
-        </div>
+        {columns.map((col) => (
+          <Droppable droppableId={col.id} key={col.id}>
+            {(provided) => (
+              <div
+                className="kanban-column"
+                ref={provided.innerRef}
+                {...provided.droppableProps}
+              >
+                <h3>{col.title}</h3>
+                {tasks[col.id]?.map((task, index) => (
+                  <Draggable
+                    key={task.id}
+                    draggableId={task.id.toString()}
+                    index={index}
+                  >
+                    {(provided) => (
+                      <div
+                        ref={provided.innerRef}
+                        {...provided.draggableProps}
+                        {...provided.dragHandleProps}
+                        className="kanban-card"
+                        style={provided.draggableProps.style}
+                      >
+                        {task.title}
+                      </div>
+                    )}
+                  </Draggable>
+                ))}
+                {provided.placeholder}
+              </div>
+            )}
+          </Droppable>
+        ))}
       </DragDropContext>
     </div>
   );

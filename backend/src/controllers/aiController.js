@@ -1,17 +1,87 @@
 const { v4: uuidv4 } = require("uuid");
 const replicate = require("../config/replicateClient.js");
-const { Project, Sprint, Task, User } = require("../models");
+const { Project, Sprint, Task, User, ChatHistory, ChatMessage } = require("../models");
 const { jsonrepair } = require("jsonrepair");
+
+// Helper function to detect response type and language
+const detectResponseType = (response) => {
+  const codePatterns = [
+    /```[\w]*\n[\s\S]*?\n```/g, // Code blocks
+    /function\s+\w+\s*\(/g, // Function declarations
+    /const\s+\w+\s*=/g, // Const declarations
+    /let\s+\w+\s*=/g, // Let declarations
+    /var\s+\w+\s*=/g, // Var declarations
+    /import\s+.*from/g, // Import statements
+    /export\s+/g, // Export statements
+    /class\s+\w+/g, // Class declarations
+    /if\s*\(/g, // If statements
+    /for\s*\(/g, // For loops
+    /while\s*\(/g, // While loops
+    /switch\s*\(/g, // Switch statements
+    /try\s*{/g, // Try blocks
+    /catch\s*\(/g, // Catch blocks
+    /console\./g, // Console statements
+    /return\s+/g, // Return statements
+  ];
+
+  const hasCode = codePatterns.some(pattern => pattern.test(response));
+  
+  // Check if response contains both code and text
+  const hasText = /[a-zA-Z]{3,}/.test(response.replace(/```[\w]*\n[\s\S]*?\n```/g, ''));
+  
+  if (hasCode && hasText) {
+    return { type: 'mixed', language: detectLanguage(response) };
+  } else if (hasCode) {
+    return { type: 'code', language: detectLanguage(response) };
+  } else {
+    return { type: 'message', language: null };
+  }
+};
+
+// Helper function to detect programming language
+const detectLanguage = (response) => {
+  const languagePatterns = {
+    javascript: /```javascript|```js|function\s+\w+\s*\(|const\s+\w+\s*=|let\s+\w+\s*=|import\s+.*from|export\s+/gi,
+    python: /```python|```py|def\s+\w+\s*\(|import\s+\w+|from\s+\w+\s+import|class\s+\w+/gi,
+    java: /```java|public\s+class|public\s+static\s+void|private\s+\w+|protected\s+\w+/gi,
+    cpp: /```cpp|```c\+\+|#include|using\s+namespace|std::|int\s+main/gi,
+    csharp: /```csharp|```cs|using\s+System|namespace\s+\w+|public\s+class/gi,
+    php: /```php|<\?php|function\s+\w+\s*\(|echo\s+|print\s+/gi,
+    ruby: /```ruby|def\s+\w+|class\s+\w+|require\s+|module\s+/gi,
+    go: /```go|package\s+\w+|func\s+\w+|import\s+\(/gi,
+    rust: /```rust|fn\s+\w+|let\s+\w+|use\s+\w+|mod\s+\w+/gi,
+    sql: /```sql|SELECT|INSERT|UPDATE|DELETE|CREATE|ALTER|DROP/gi,
+    html: /```html|<!DOCTYPE|<html|<\/html>|<head|<\/head>|<body|<\/body>/gi,
+    css: /```css|\.\w+\s*{|#\w+\s*{|@media|@keyframes/gi,
+    typescript: /```typescript|```ts|interface\s+\w+|type\s+\w+=|enum\s+\w+/gi,
+    react: /```jsx|```tsx|import\s+React|export\s+default|function\s+\w+\s*\(|const\s+\w+\s*=\s*\(/gi,
+    vue: /```vue|<template>|export\s+default|data\s*\(\)|methods\s*:/gi
+  };
+
+  for (const [language, pattern] of Object.entries(languagePatterns)) {
+    if (pattern.test(response)) {
+      return language;
+    }
+  }
+  
+  return 'text';
+};
+
+// Helper function to generate title from prompt
+const generateTitle = (prompt) => {
+  const words = prompt.split(' ').slice(0, 5);
+  return words.join(' ') + (prompt.split(' ').length > 5 ? '...' : '');
+};
 
 exports.chat = async (req, res) => {
   try {
-    const { prompt, options } = req.body;
+    const { prompt, options, chatHistoryId } = req.body;
     if (!prompt) return res.status(400).json({ message: "prompt required" });
 
     const input = {
       prompt,
-      max_tokens: options?.max_tokens ?? 256,
-      temperature: options?.temperature ?? 0.6,
+      max_tokens: options?.max_tokens ?? 1024,
+      temperature: options?.temperature ?? 0.7,
       top_p: options?.top_p ?? 0.9,
       top_k: options?.top_k ?? 50,
     };
@@ -20,12 +90,134 @@ exports.chat = async (req, res) => {
       input,
     });
 
-    const text = Array.isArray(output) ? output.join("") : String(output);
+    const response = Array.isArray(output) ? output.join("") : String(output);
+    
+    // Detect response type and language
+    const { type, language } = detectResponseType(response);
+    
+    let chatHistory;
+    let isNewChat = false;
 
-    return res.json({ result: text });
+    if (chatHistoryId) {
+      // Continue existing chat
+      chatHistory = await ChatHistory.findOne({
+        where: { id: chatHistoryId, userId: req.user.id }
+      });
+      if (!chatHistory) {
+        return res.status(404).json({ error: "Chat not found" });
+      }
+      // Not a new chat since we're continuing existing one
+      isNewChat = false;
+    } else {
+      // Create new chat
+      const title = generateTitle(prompt);
+      chatHistory = await ChatHistory.create({
+        title,
+        userId: req.user.id
+      });
+      isNewChat = true;
+    }
+
+    // Save user message
+    await ChatMessage.create({
+      prompt,
+      response: prompt, // For user message, response is the same as prompt
+      type: 'message',
+      language: null,
+      isUserMessage: true,
+      chatHistoryId: chatHistory.id
+    });
+
+    // Save AI response
+    const aiMessage = await ChatMessage.create({
+      prompt,
+      response,
+      type,
+      language,
+      isUserMessage: false,
+      chatHistoryId: chatHistory.id
+    });
+
+    return res.json({ 
+      result: response,
+      type,
+      language,
+      title: chatHistory.title,
+      chatHistoryId: chatHistory.id,
+      messageId: aiMessage.id,
+      timestamp: aiMessage.createdAt,
+      isNewChat
+    });
   } catch (err) {
     console.error("AI chat error:", err);
     return res.status(500).json({ error: err.message || "AI error" });
+  }
+};
+
+exports.getChatHistory = async (req, res) => {
+  try {
+    const chatHistory = await ChatHistory.findAll({
+      where: { userId: req.user.id, isActive: true },
+      order: [['createdAt', 'DESC']],
+      limit: 50,
+      include: [
+        {
+          model: ChatMessage,
+          order: [['createdAt', 'ASC']],
+          limit: 1 // Get only the first message for preview
+        }
+      ]
+    });
+    
+    res.json(chatHistory);
+  } catch (err) {
+    console.error("Get chat history error:", err);
+    return res.status(500).json({ error: err.message || "Failed to get chat history" });
+  }
+};
+
+exports.getChatById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const chat = await ChatHistory.findOne({
+      where: { id, userId: req.user.id },
+      include: [
+        {
+          model: ChatMessage,
+          order: [['createdAt', 'ASC']]
+        }
+      ]
+    });
+    
+    if (!chat) {
+      return res.status(404).json({ error: "Chat not found" });
+    }
+    
+    res.json(chat);
+  } catch (err) {
+    console.error("Get chat by id error:", err);
+    return res.status(500).json({ error: err.message || "Failed to get chat" });
+  }
+};
+
+exports.deleteChat = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const chat = await ChatHistory.findOne({
+      where: { id, userId: req.user.id }
+    });
+    
+    if (!chat) {
+      return res.status(404).json({ error: "Chat not found" });
+    }
+    
+    // Soft delete by setting isActive to false
+    await chat.update({ isActive: false });
+    
+    res.json({ message: "Chat deleted successfully" });
+  } catch (err) {
+    console.error("Delete chat error:", err);
+    return res.status(500).json({ error: err.message || "Failed to delete chat" });
   }
 };
 

@@ -2,6 +2,8 @@ const Project = require('./Project');
 const Sprint = require('./Sprint');
 const Task = require('./Task');
 const User = require('./User');
+const ChatHistory = require('./ChatHistory');
+const ChatMessage = require('./ChatMessage');
 
 // User associations
 User.hasMany(Project, { foreignKey: 'userId', onDelete: 'CASCADE' });
@@ -21,9 +23,19 @@ Task.belongsTo(Sprint, { foreignKey: 'sprintId' });
 // Sprint belongs to Project
 Sprint.belongsTo(Project, { foreignKey: 'projectId' });
 
+// User associations for ChatHistory
+User.hasMany(ChatHistory, { foreignKey: 'userId', onDelete: 'CASCADE' });
+ChatHistory.belongsTo(User, { foreignKey: 'userId' });
+
+// ChatHistory associations for ChatMessage
+ChatHistory.hasMany(ChatMessage, { foreignKey: 'chatHistoryId', onDelete: 'CASCADE' });
+ChatMessage.belongsTo(ChatHistory, { foreignKey: 'chatHistoryId' });
+
 module.exports = {
   Project,
   Sprint,
   Task,
-  User
+  User,
+  ChatHistory,
+  ChatMessage
 };

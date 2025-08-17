@@ -1,5 +1,8 @@
 
+
 # 🚀 AI-Sprint-Manager
+
+[📄 Pitch Deck Sprintify](./Pitch%20Deck%20Sprintify.pdf)
 
 AI-Sprint-Manager adalah platform manajemen proyek & sprint berbasis AI yang membantu tim bekerja lebih cerdas, bukan lebih keras! Dengan fitur kolaborasi, dashboard interaktif, dan chat AI, semua kebutuhan pengelolaan proyek modern ada di sini.
 

@@ -1,16 +1,17 @@
-import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { AuthProvider, AuthContext } from './context/AuthContext';
+// src/App.js
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { AuthProvider } from './context/AuthContext';
+import PrivateRoute from './context/PrivateRoute';
+import Layout from './components/Layout';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
+import CreateProject from './pages/CreateProject';
+import Board from './pages/Board';
+import AISprintChat from './pages/AISprintChat';
+import AICodeChat from './pages/AICodeChat';
 
-function PrivateRoute({ children }) {
-  const { token } = React.useContext(AuthContext);
-  return token ? children : <Navigate to="/login" />;
-}
-
-export default function App() {
+function App() {
   return (
     <AuthProvider>
       <Router>
@@ -18,10 +19,19 @@ export default function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           <Route
-            path="/"
+            path="/*"
             element={
               <PrivateRoute>
-                <Dashboard />
+                <Layout>
+                  <Routes>
+                    <Route path="/" element={<Dashboard />} />
+                    <Route path="/dashboard" element={<Dashboard />} />
+                    <Route path="/project/create" element={<CreateProject />} />
+                    <Route path="/board" element={<Board />} />
+                    <Route path="/ai/sprint" element={<AISprintChat />} />
+                    <Route path="/ai/code" element={<AICodeChat />} />
+                  </Routes>
+                </Layout>
               </PrivateRoute>
             }
           />
@@ -30,3 +40,5 @@ export default function App() {
     </AuthProvider>
   );
 }
+
+export default App;

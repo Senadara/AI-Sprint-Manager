@@ -1,11 +1,13 @@
 const { DataTypes } = require('sequelize');
 const { sequelize } = require('../config/database');
-const Project = require('./Project');
 
 const Sprint = sequelize.define('Sprint', {
   name: {
     type: DataTypes.STRING,
     allowNull: false
+  },
+  description: {
+    type: DataTypes.TEXT
   },
   startDate: {
     type: DataTypes.DATE,
@@ -17,8 +19,6 @@ const Sprint = sequelize.define('Sprint', {
   }
 });
 
-// Relasi: Sprint milik 1 Project
-Project.hasMany(Sprint, { foreignKey: 'projectId', onDelete: 'CASCADE' });
-Sprint.belongsTo(Project, { foreignKey: 'projectId' });
+// Relasi akan didefinisikan di file associations.js
 
 module.exports = Sprint;

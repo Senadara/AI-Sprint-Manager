@@ -34,6 +34,15 @@ const Layout = ({ children }) => {
       path: '/board'
     },
     {
+      name: 'Project Management',
+      icon: (
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+        </svg>
+      ),
+      path: '/projects'
+    },
+    {
       name: 'AI Sprint Chat',
       icon: (
         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -103,12 +112,12 @@ const Layout = ({ children }) => {
             <div className="flex items-center space-x-3 mb-3">
               <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
                 <span className="text-white text-sm font-bold">
-                  {user?.name ? user.name.charAt(0).toUpperCase() : 'A'}
+                  {user?.username ? user.username.charAt(0).toUpperCase() : 'A'}
                 </span>
               </div>
               {!isSidebarCollapsed && (
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-gray-900 truncate">{user?.name || 'Admin User'}</p>
+                  <p className="text-sm font-medium text-gray-900 truncate">{user?.username || 'Admin User'}</p>
                   <p className="text-xs text-gray-500 truncate">{user?.email || 'admin@example.com'}</p>
                 </div>
               )}
@@ -155,6 +164,7 @@ const Layout = ({ children }) => {
             <div className="text-sm text-gray-500">
               Project &gt; AI Sprint Manager &gt; {location.pathname === '/dashboard' ? 'Dashboard' : 
                 location.pathname === '/board' ? 'Board Sprint' :
+                location.pathname === '/projects' ? 'Project Management' :
                 location.pathname === '/ai/sprint' ? 'AI Sprint Chat' :
                 location.pathname === '/ai/code' ? 'AI Code Chat' : 'Dashboard'}
             </div>
@@ -179,11 +189,11 @@ const Layout = ({ children }) => {
             <div className="flex items-center space-x-3">
               <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
                 <span className="text-white text-sm font-bold">
-                  {user?.name ? user.name.charAt(0).toUpperCase() : 'A'}
+                  {user?.username ? user.username.charAt(0).toUpperCase() : 'A'}
                 </span>
               </div>
               <div className="hidden md:block">
-                <p className="text-sm font-medium text-gray-900">{user?.name || 'Admin User'}</p>
+                <p className="text-sm font-medium text-gray-900">{user?.username || 'Admin User'}</p>
                 <p className="text-xs text-gray-500">{user?.email || 'admin@example.com'}</p>
               </div>
             </div>

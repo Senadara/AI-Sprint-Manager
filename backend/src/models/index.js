@@ -1,11 +1,4 @@
-const Project = require('./Project');
-const Sprint = require('./Sprint');
-const Task = require('./Task');
-const User = require('./User');
+// Import associations to ensure all relationships are properly set up
+const models = require('./associations');
 
-module.exports = {
-  Project,
-  Sprint,
-  Task,
-  User
-};
+module.exports = models;

@@ -1,5 +1,4 @@
-const Sprint = require('../models/Sprint');
-const Project = require('../models/Project');
+const { Sprint, Project, Task } = require('../models');
 
 exports.createSprint = async (req, res) => {
   try {
@@ -19,7 +18,69 @@ exports.createSprint = async (req, res) => {
 exports.getSprints = async (req, res) => {
   try {
     const { projectId } = req.params;
-    const sprints = await Sprint.findAll({ where: { projectId } });
+    
+    // Pastikan project milik user
+    const project = await Project.findOne({ where: { id: projectId, userId: req.user.id } });
+    if (!project) return res.status(404).json({ message: 'Project not found' });
+
+    const sprints = await Sprint.findAll({ 
+      where: { projectId },
+      include: [
+        {
+          model: Task,
+          as: 'Tasks'
+        }
+      ]
+    });
+    res.json(sprints);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+exports.getAllSprints = async (req, res) => {
+  try {
+    const { projectId, startDate, endDate, assignee } = req.query;
+    
+    let whereClause = {};
+    let taskWhereClause = {};
+    
+    // Filter by project
+    if (projectId) {
+      whereClause.projectId = projectId;
+    }
+    
+    // Filter by date range
+    if (startDate && endDate) {
+      whereClause.startDate = {
+        [require('sequelize').Op.between]: [new Date(startDate), new Date(endDate)]
+      };
+    }
+    
+    // Filter by assignee
+    if (assignee) {
+      taskWhereClause.assignee = {
+        [require('sequelize').Op.like]: `%${assignee}%`
+      };
+    }
+    
+    const sprints = await Sprint.findAll({ 
+      where: whereClause,
+      include: [
+        {
+          model: Task,
+          as: 'Tasks',
+          where: Object.keys(taskWhereClause).length > 0 ? taskWhereClause : undefined,
+          required: Object.keys(taskWhereClause).length > 0
+        },
+        {
+          model: Project,
+          attributes: ['id', 'name', 'description']
+        }
+      ],
+      order: [['startDate', 'ASC']]
+    });
+    
     res.json(sprints);
   } catch (error) {
     res.status(500).json({ error: error.message });

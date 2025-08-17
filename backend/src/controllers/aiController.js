@@ -1,9 +1,9 @@
-import { v4 as uuidv4 } from "uuid";
-import replicate from "../config/replicateClient.js";
-import { Project, Sprint, Task, User } from "../models/index.js";
-import { jsonrepair } from "jsonrepair"; // named import yang benar di ESM
+const { v4: uuidv4 } = require("uuid");
+const replicate = require("../config/replicateClient.js");
+const { Project, Sprint, Task, User } = require("../models");
+const { jsonrepair } = require("jsonrepair");
 
-export const chat = async (req, res) => {
+exports.chat = async (req, res) => {
   try {
     const { prompt, options } = req.body;
     if (!prompt) return res.status(400).json({ message: "prompt required" });
@@ -29,7 +29,7 @@ export const chat = async (req, res) => {
   }
 };
 
-export const generateSprint = async (req, res) => {
+exports.generateSprint = async (req, res) => {
   try {
     const { judulProject, deskripsiProject, deadlineProject, stackProject } =
       req.body;
@@ -43,7 +43,7 @@ Anda adalah AI Project Manager.
 Output HARUS berupa JSON valid, tanpa teks, penjelasan, atau komentar apapun.
 Gunakan hanya properti berikut sesuai format:
 - sprints[]: id (null), name (string), description (string), start_date (YYYY-MM-DD), end_date (YYYY-MM-DD), tasks[]
-- tasks[]: id (null), title (string), description (string), estimated_days (number), status ("todo"), sprintReference ("SPRINT_REF_X")
+- tasks[]: id (null), title (string), description (string), estimated_days (number), status ("todo"), sprintReference ("SPRINT_REF_X"), priority ("low"/"medium"/"high"/"critical"), assignee (string), deadline (YYYY-MM-DD)
 
 Contoh:
 {
@@ -61,7 +61,10 @@ Contoh:
           "description": "Deskripsi task",
           "estimated_days": 3,
           "status": "todo",
-          "sprintReference": "SPRINT_REF_1"
+          "sprintReference": "SPRINT_REF_1",
+          "priority": "high",
+          "assignee": "John Doe",
+          "deadline": "2025-01-05"
         }
       ]
     }
@@ -132,7 +135,7 @@ Hanya kirimkan JSON, tanpa kalimat lain.
   }
 };
 
-export const saveSprint = async (req, res) => {
+exports.saveSprint = async (req, res) => {
   try {
     const { projectId, sprints } = req.body;
     if (!projectId || !sprints) {
@@ -165,6 +168,10 @@ export const saveSprint = async (req, res) => {
           title: task.title,
           description: task.description,
           status: task.status || "todo",
+          priority: task.priority || "medium",
+          assignee: task.assignee || null,
+          deadline: task.deadline ? new Date(task.deadline) : null,
+          estimatedDays: task.estimated_days || null,
           projectId,
           sprintId: sprintRefMap[task.sprintReference] || null,
         });

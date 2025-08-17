@@ -1,7 +1,5 @@
 const { DataTypes } = require('sequelize');
 const { sequelize } = require('../config/database');
-const Project = require('./Project');
-const Sprint = require('./Sprint');
 
 const Task = sequelize.define('Task', {
   title: {
@@ -14,14 +12,25 @@ const Task = sequelize.define('Task', {
   },
   description: {
     type: DataTypes.TEXT
+  },
+  priority: {
+    type: DataTypes.ENUM('low', 'medium', 'high', 'critical'),
+    defaultValue: 'medium'
+  },
+  assignee: {
+    type: DataTypes.STRING,
+    allowNull: true
+  },
+  deadline: {
+    type: DataTypes.DATE,
+    allowNull: true
+  },
+  estimatedDays: {
+    type: DataTypes.INTEGER,
+    allowNull: true
   }
 });
 
-// Relasi: Task milik Project & Sprint (opsional)
-Project.hasMany(Task, { foreignKey: 'projectId', onDelete: 'CASCADE' });
-Task.belongsTo(Project, { foreignKey: 'projectId' });
-
-Sprint.hasMany(Task, { foreignKey: 'sprintId', onDelete: 'SET NULL' });
-Task.belongsTo(Sprint, { foreignKey: 'sprintId' });
+// Relasi akan didefinisikan di file terpisah untuk menghindari circular dependency
 
 module.exports = Task;

@@ -1,8 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import { Link } from 'react-router-dom';
 import axios from '../api/axios';
+import { AuthContext } from '../context/AuthContext';
 
 const Dashboard = () => {
+  const { user } = useContext(AuthContext);
   const [stats, setStats] = useState([
     { name: 'Total Tasks', value: '0', change: '+0%', changeType: 'increase', icon: '📋' },
     { name: 'In Progress', value: '0', change: '+0%', changeType: 'increase', icon: '🔄' },
@@ -81,6 +83,13 @@ const Dashboard = () => {
 
   const quickActions = [
     {
+      title: 'Create Project',
+      description: 'Start a new project',
+      icon: '🚀',
+      path: '/project/create',
+      color: 'from-orange-500 to-orange-600'
+    },
+    {
       title: 'Create New Sprint',
       description: 'Use AI to generate sprint planning',
       icon: '🎯',
@@ -100,13 +109,6 @@ const Dashboard = () => {
       icon: '💻',
       path: '/ai/code',
       color: 'from-purple-500 to-purple-600'
-    },
-    {
-      title: 'Create Project',
-      description: 'Start a new project',
-      icon: '🚀',
-      path: '/project/create',
-      color: 'from-orange-500 to-orange-600'
     }
   ];
 
@@ -150,7 +152,7 @@ const Dashboard = () => {
       <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl p-8 text-white">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold mb-2">Welcome back, Admin! 👋</h1>
+            <h1 className="text-3xl font-bold mb-2">Welcome back, {user?.username || 'Admin'}! 👋</h1>
             <p className="text-blue-100 text-lg">Here's what's happening with your projects today.</p>
           </div>
           <div className="text-6xl">🎉</div>

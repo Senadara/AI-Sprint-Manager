@@ -4,6 +4,8 @@ const express = require('express');
 const cors = require('cors');
 const http = require('http');
 const { connectDB, sequelize } = require('./config/database');
+// Import models to ensure associations are loaded
+require('./models');
 
 const app = express();
 const server = http.createServer(app);

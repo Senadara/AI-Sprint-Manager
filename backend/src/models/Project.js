@@ -1,6 +1,5 @@
 const { DataTypes } = require('sequelize');
 const { sequelize } = require('../config/database');
-const User = require('./User');
 
 const Project = sequelize.define('Project', {
   name: {
@@ -10,10 +9,14 @@ const Project = sequelize.define('Project', {
   description: {
     type: DataTypes.TEXT
   },
+  deadline: {
+    type: DataTypes.DATE
+  },
+  stack: {
+    type: DataTypes.JSON
+  }
 });
 
-// Relasi: Project dimiliki oleh 1 User
-User.hasMany(Project, { foreignKey: 'userId', onDelete: 'CASCADE' });
-Project.belongsTo(User, { foreignKey: 'userId' });
+// Relasi akan didefinisikan di file associations.js
 
 module.exports = Project;

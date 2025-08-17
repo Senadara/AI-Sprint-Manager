@@ -1,10 +1,8 @@
-const Task = require("../models/Task");
-const Project = require("../models/Project");
-const Sprint = require("../models/Sprint");
+const { Task, Project, Sprint } = require("../models");
 
 exports.createTask = async (req, res) => {
   try {
-    const { projectId, sprintId, title, description, status } = req.body;
+    const { projectId, sprintId, title, description, status, priority, assignee, deadline, estimatedDays } = req.body;
 
     // Pastikan project milik user
     const project = await Project.findOne({
@@ -25,6 +23,10 @@ exports.createTask = async (req, res) => {
       title,
       description,
       status,
+      priority,
+      assignee,
+      deadline: deadline ? new Date(deadline) : null,
+      estimatedDays,
     });
     res.status(201).json(task);
   } catch (error) {
@@ -45,13 +47,19 @@ exports.getTasks = async (req, res) => {
 exports.updateTask = async (req, res) => {
   try {
     const { id } = req.params;
-    const { status } = req.body;
+    const { status, priority, assignee, deadline, estimatedDays } = req.body;
 
     const task = await Task.findByPk(id);
     if (!task) return res.status(404).json({ message: "Task not found" });
 
-    // update status
-    await task.update({ status });
+    // update task
+    await task.update({ 
+      status, 
+      priority, 
+      assignee, 
+      deadline: deadline ? new Date(deadline) : null,
+      estimatedDays 
+    });
 
     // ambil semua task milik project supaya broadcast state penuh (grouped)
     const allTasks = await Task.findAll({

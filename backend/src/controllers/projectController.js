@@ -1,4 +1,4 @@
-const Project = require('../models/Project');
+const { Project } = require('../models');
 
 exports.createProject = async (req, res) => {
   try {
@@ -14,6 +14,17 @@ exports.getProjects = async (req, res) => {
   try {
     const projects = await Project.findAll({ where: { userId: req.user.id } });
     res.json(projects);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+exports.getProject = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const project = await Project.findOne({ where: { id, userId: req.user.id } });
+    if (!project) return res.status(404).json({ message: 'Project not found' });
+    res.json(project);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

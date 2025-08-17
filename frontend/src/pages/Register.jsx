@@ -1,5 +1,5 @@
 import { useState, useContext } from 'react';
-import axios from 'axios';
+import axios from '../api/axios';
 import { AuthContext } from '../context/AuthContext';
 import { useNavigate, Link } from 'react-router-dom';
 
@@ -21,13 +21,13 @@ export default function Register() {
     setError('');
     
     try {
-      const res = await axios.post('http://localhost:5000/api/auth/register', form);
+      const res = await axios.post('/auth/register', form);
       
       // Register API hanya mengembalikan message, tidak ada token
       // Jadi kita perlu login setelah register
       if (res.status === 201) {
         // Auto login setelah register berhasil
-        const loginRes = await axios.post('http://localhost:5000/api/auth/login', {
+        const loginRes = await axios.post('/auth/login', {
           email: form.email,
           password: form.password
         });

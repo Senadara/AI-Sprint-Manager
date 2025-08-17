@@ -1,5 +1,5 @@
 import { useState, useContext } from 'react';
-import axios from 'axios';
+import axios from '../api/axios';
 import { AuthContext } from '../context/AuthContext';
 import { useNavigate, Link } from 'react-router-dom';
 
@@ -21,7 +21,7 @@ export default function Login() {
     setError('');
     
     try {
-      const res = await axios.post('http://localhost:5000/api/auth/login', form);
+      const res = await axios.post('/auth/login', form);
       login(res.data.token, res.data.userData);
       navigate('/dashboard');
     } catch (err) {

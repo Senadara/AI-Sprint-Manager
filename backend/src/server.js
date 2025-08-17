@@ -1,24 +1,26 @@
-// src/server.js
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const http = require('http');
 const { connectDB, sequelize } = require('./config/database');
-// Import models to ensure associations are loaded
 require('./models');
 
 const app = express();
 const server = http.createServer(app);
 const { Server } = require('socket.io');
+
+// Ambil origin dari ENV atau default ke localhost (supaya fleksibel)
+const allowedOrigin = process.env.CLIENT_URL || 'http://localhost:5173';
+
 const io = new Server(server, {
   cors: {
-    origin: 'http://localhost:5173',
+    origin: allowedOrigin,
     methods: ['GET', 'POST', 'PUT', 'DELETE']
   }
 });
 
 app.use(cors({
-  origin: 'http://localhost:5173',
+  origin: allowedOrigin,
   credentials: true
 }));
 app.use(express.json());
@@ -30,13 +32,11 @@ app.use('/api/sprints', require('./routes/sprint'));
 app.use('/api/tasks', require('./routes/task'));
 app.use('/api/ai', require('./routes/ai'));
 
-
-// Socket.IO logic
 io.on('connection', (socket) => {
   console.log('User connected:', socket.id);
 
   socket.on('taskUpdated', (data) => {
-    socket.broadcast.emit('taskUpdated', data); // broadcast ke semua client
+    socket.broadcast.emit('taskUpdated', data);
   });
 
   socket.on('disconnect', () => {
@@ -48,10 +48,12 @@ app.get('/', (req, res) => {
   res.send('AI Sprint Manager Backend is running 🚀');
 });
 
+// PORT harus dari env (cPanel yang tentukan)
 const PORT = process.env.PORT || 5000;
+
 server.listen(PORT, async () => {
   console.log(`✅ Server running on port ${PORT}`);
   await connectDB();
-  await sequelize.sync({ alter: true });
+  await sequelize.sync(); // di production sebaiknya migrasi manual, bukan alter
   console.log('✅ Database synced');
 });
